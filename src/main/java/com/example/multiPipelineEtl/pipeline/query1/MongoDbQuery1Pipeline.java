@@ -6,9 +6,7 @@ import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,14 +14,21 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.example.multiPipelineEtl.pipeline.common.QueryExecutionContext;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+import com.mongodb.client.model.Filters;
 
 public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
-    private static final String PIPELINE_NAME = "MongoDBJDBCQuery1Pipeline";
+    private static final String PIPELINE_NAME = "MongoDBQuery1Pipeline";
     private static final Pattern LOG_PATTERN =
         Pattern.compile("^\\S+\\s+\\S+\\s+\\S+\\s+\\[([^\\]]+)]\\s+\"[^\"]*\"\\s+(\\d{3})\\s+(\\S+).*$");
     private static final DateTimeFormatter NASA_TIMESTAMP_FORMATTER = new DateTimeFormatterBuilder()
@@ -35,14 +40,22 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
         .appendPattern("EEE MMM dd HH:mm:ss yyyy")
         .toFormatter(Locale.ENGLISH);
 
-    private final Connection mongoConnection;
-    private boolean stageTableInitialized = false;
+    private final MongoClient mongoClient;
+    private final MongoDatabase database;
+    private final MongoCollection<Document> stageCollection;
+    private final MongoCollection<Document> aggCollection;
 
-    public MongoDbQuery1Pipeline(Connection mongoConnection) {
-        if (mongoConnection == null) {
-            throw new IllegalArgumentException("mongoConnection cannot be null");
+    public MongoDbQuery1Pipeline(MongoClient mongoClient, String databaseName) {
+        if (mongoClient == null) {
+            throw new IllegalArgumentException("mongoClient cannot be null");
         }
-        this.mongoConnection = mongoConnection;
+        if (databaseName == null || databaseName.trim().isEmpty()) {
+            throw new IllegalArgumentException("databaseName cannot be null or empty");
+        }
+        this.mongoClient = mongoClient;
+        this.database = mongoClient.getDatabase(databaseName);
+        this.stageCollection = database.getCollection("query1_stage");
+        this.aggCollection = database.getCollection("query1_agg");
     }
 
     @Override
@@ -54,7 +67,6 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
             throw new IllegalArgumentException("batchId must be greater than zero");
         }
 
-        ensureMongoWorkingTablesInitialized();
         clearBatchData(batchId);
 
         long startLine = (long) (batchId - 1) * context.getBatchSize();
@@ -62,9 +74,9 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
         long readRecords = 0L;
         long malformedRecords = 0L;
 
-        String insertSql = "INSERT INTO query1_stage (batch_id, log_date, status_code, bytes_transferred) VALUES (?, ?, ?, ?)";
-        try (BufferedReader reader = Files.newBufferedReader(context.getInputFilePath());
-             PreparedStatement insertStatement = mongoConnection.prepareStatement(insertSql)) {
+        List<Document> documents = new ArrayList<>();
+
+        try (BufferedReader reader = Files.newBufferedReader(context.getInputFilePath())) {
             long currentLineIndex = 0L;
             String line;
             while ((line = reader.readLine()) != null) {
@@ -74,11 +86,12 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
                     if (parsedFields == null) {
                         malformedRecords++;
                     } else {
-                        insertStatement.setInt(1, batchId);
-                        insertStatement.setString(2, parsedFields.logDate);
-                        insertStatement.setInt(3, parsedFields.statusCode);
-                        insertStatement.setLong(4, parsedFields.bytesTransferred);
-                        insertStatement.addBatch();
+                        Document doc = new Document();
+                        doc.append("batch_id", batchId);
+                        doc.append("log_date", parsedFields.logDate);
+                        doc.append("status_code", parsedFields.statusCode);
+                        doc.append("bytes_transferred", parsedFields.bytesTransferred);
+                        documents.add(doc);
                     }
                     linesToRead--;
                     if (linesToRead == 0) {
@@ -87,7 +100,10 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
                 }
                 currentLineIndex++;
             }
-            insertStatement.executeBatch();
+        }
+
+        if (!documents.isEmpty()) {
+            stageCollection.insertMany(documents);
         }
 
         setCurrentBatchStats(readRecords, malformedRecords);
@@ -95,44 +111,60 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
 
     @Override
     protected void groupAndAggregate(QueryExecutionContext context, int batchId) throws SQLException {
-        String aggregateSql =
-            "INSERT INTO query1_agg (batch_id, log_date, status_code, request_count, total_bytes) "
-                + "SELECT batch_id, log_date, status_code, COUNT(*), COALESCE(SUM(bytes_transferred), 0) "
-                + "FROM query1_stage WHERE batch_id = ? GROUP BY batch_id, log_date, status_code";
+        List<Document> pipeline = new ArrayList<>();
+        pipeline.add(new Document("$match", new Document("batch_id", batchId)));
+        pipeline.add(new Document("$group", new Document()
+            .append("_id", new Document()
+                .append("batch_id", "$batch_id")
+                .append("log_date", "$log_date")
+                .append("status_code", "$status_code")
+            )
+            .append("request_count", new Document("$sum", 1))
+            .append("total_bytes", new Document("$sum", "$bytes_transferred"))
+        ));
+        pipeline.add(new Document("$project", new Document()
+            .append("_id", 0)
+            .append("batch_id", "$_id.batch_id")
+            .append("log_date", "$_id.log_date")
+            .append("status_code", "$_id.status_code")
+            .append("request_count", 1)
+            .append("total_bytes", 1)
+        ));
 
-        try (PreparedStatement statement = mongoConnection.prepareStatement(aggregateSql)) {
-            statement.setInt(1, batchId);
-            statement.executeUpdate();
+        List<Document> results = stageCollection.aggregate(pipeline).into(new ArrayList<>());
+
+        if (!results.isEmpty()) {
+            aggCollection.insertMany(results);
         }
     }
 
     @Override
     protected void load(QueryExecutionContext context, int batchId) throws SQLException {
-        String selectSql =
-            "SELECT log_date, status_code, request_count, total_bytes FROM query1_agg WHERE batch_id = ?";
+        List<Document> results = aggCollection.find(Filters.eq("batch_id", batchId)).into(new ArrayList<>());
+
         String insertSql = "INSERT INTO query1_results "
             + "(execution_choice, pipeline_name, batch_id, log_date, status_code, request_count, total_bytes, executed_at) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement select = mongoConnection.prepareStatement(selectSql);
-             PreparedStatement insert = context.getConnection().prepareStatement(insertSql)) {
-            select.setInt(1, batchId);
-            try (ResultSet resultSet = select.executeQuery()) {
-                while (resultSet.next()) {
-                    insert.setString(1, context.getExecutionChoiceName());
-                    insert.setString(2, PIPELINE_NAME);
-                    insert.setInt(3, batchId);
-                    insert.setDate(4, Date.valueOf(resultSet.getString("log_date")));
-                    insert.setInt(5, resultSet.getInt("status_code"));
-                    insert.setLong(6, resultSet.getLong("request_count"));
-                    insert.setLong(7, resultSet.getLong("total_bytes"));
-                    insert.setTimestamp(8, Timestamp.from(context.getExecutionTime()));
-                    insert.addBatch();
-                }
+        Connection postgresConnection = context.getConnection();
+        try (PreparedStatement insert = postgresConnection.prepareStatement(insertSql)) {
+            for (Document doc : results) {
+                Number requestCount = (Number) doc.get("request_count");
+                Number totalBytes = (Number) doc.get("total_bytes");
+                insert.setString(1, context.getExecutionChoiceName());
+                insert.setString(2, PIPELINE_NAME);
+                insert.setInt(3, doc.getInteger("batch_id"));
+                insert.setDate(4, Date.valueOf(doc.getString("log_date")));
+                insert.setInt(5, doc.getInteger("status_code"));
+                insert.setLong(6, requestCount.longValue());
+                insert.setLong(7, totalBytes.longValue());
+                insert.setTimestamp(8, Timestamp.from(context.getExecutionTime()));
+                insert.addBatch();
             }
             insert.executeBatch();
         }
     }
+
 
     static ParsedLogRecord parseLine(String line) {
         ParsedFields parsedFields = parseLineToFields(line);
@@ -197,44 +229,9 @@ public class MongoDbQuery1Pipeline extends AbstractQuery1Pipeline {
         return null;
     }
 
-    private void ensureMongoWorkingTablesInitialized() throws SQLException {
-        if (stageTableInitialized) {
-            return;
-        }
-
-        String createStageSql = "CREATE TABLE IF NOT EXISTS query1_stage ("
-            + "batch_id INTEGER, "
-            + "log_date VARCHAR(20), "
-            + "status_code INTEGER, "
-            + "bytes_transferred BIGINT"
-            + ")";
-        String createAggregateSql = "CREATE TABLE IF NOT EXISTS query1_agg ("
-            + "batch_id INTEGER, "
-            + "log_date VARCHAR(20), "
-            + "status_code INTEGER, "
-            + "request_count BIGINT, "
-            + "total_bytes BIGINT"
-            + ")";
-
-        try (Statement statement = mongoConnection.createStatement()) {
-            statement.executeUpdate(createStageSql);
-            statement.executeUpdate(createAggregateSql);
-        }
-        stageTableInitialized = true;
-    }
-
-    private void clearBatchData(int batchId) throws SQLException {
-        try (PreparedStatement deleteStage = mongoConnection.prepareStatement(
-            "DELETE FROM query1_stage WHERE batch_id = ?"
-        );
-             PreparedStatement deleteAgg = mongoConnection.prepareStatement(
-                 "DELETE FROM query1_agg WHERE batch_id = ?"
-             )) {
-            deleteStage.setInt(1, batchId);
-            deleteStage.executeUpdate();
-            deleteAgg.setInt(1, batchId);
-            deleteAgg.executeUpdate();
-        }
+    private void clearBatchData(int batchId) {
+        stageCollection.deleteMany(Filters.eq("batch_id", batchId));
+        aggCollection.deleteMany(Filters.eq("batch_id", batchId));
     }
 
     private static final class ParsedFields {
