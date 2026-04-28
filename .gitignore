@@ -4,6 +4,10 @@ docs/NoSQL26_ET_project_statement.pdf
 jdk1.8.0_491/
 data/
 target/
+.settings/
+.classpath
+.project
+
 # Compiled class file
 *.class
 
