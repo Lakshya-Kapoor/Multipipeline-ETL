@@ -5,17 +5,17 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public final class MongoJdbcConnectionFactory {
-    private MongoJdbcConnectionFactory() {
+  private MongoJdbcConnectionFactory() {
+  }
+
+  public static Connection openConnection(MongoJdbcConfig config) throws SQLException {
+    if (config == null) {
+      throw new IllegalArgumentException("config cannot be null");
     }
 
-    public static Connection openConnection(MongoJdbcConfig config) throws SQLException {
-        if (config == null) {
-            throw new IllegalArgumentException("config cannot be null");
-        }
-
-        if (config.getUser().isEmpty()) {
-            return DriverManager.getConnection(config.getJdbcUrl());
-        }
-        return DriverManager.getConnection(config.getJdbcUrl(), config.getUser(), config.getPassword());
+    if (config.getUser().isEmpty()) {
+      return DriverManager.getConnection(config.getJdbcUrl());
     }
+    return DriverManager.getConnection(config.getJdbcUrl(), config.getUser(), config.getPassword());
+  }
 }

@@ -5,13 +5,13 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public final class PostgresConnectionFactory {
-    private PostgresConnectionFactory() {
-    }
+  private PostgresConnectionFactory() {
+  }
 
-    public static Connection openConnection(PostgresConfig config) throws SQLException {
-        if (config == null) {
-            throw new IllegalArgumentException("config cannot be null");
-        }
-        return DriverManager.getConnection(config.toJdbcUrl(), config.getUser(), config.getPassword());
+  public static Connection openConnection(PostgresConfig config) throws SQLException {
+    if (config == null) {
+      throw new IllegalArgumentException("config cannot be null");
     }
+    return DriverManager.getConnection(config.toJdbcUrl(), config.getUser(), config.getPassword());
+  }
 }

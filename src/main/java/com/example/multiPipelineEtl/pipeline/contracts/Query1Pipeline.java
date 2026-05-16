@@ -6,5 +6,5 @@ import java.sql.SQLException;
 import com.example.multiPipelineEtl.pipeline.common.QueryExecutionContext;
 
 public interface Query1Pipeline {
-    void run(int numberOfBatches, QueryExecutionContext context) throws IOException, SQLException;
+  void run(int numberOfBatches, QueryExecutionContext context) throws IOException, SQLException;
 }
