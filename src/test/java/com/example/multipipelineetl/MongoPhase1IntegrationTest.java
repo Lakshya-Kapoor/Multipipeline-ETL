@@ -36,21 +36,4 @@ public class MongoPhase1IntegrationTest extends TestCase {
         assertEquals(1000, request.getBatchSize());
         assertEquals("sample_logs.txt", request.getDatasetPath());
     }
-
-    public void testNotImplementedPlanners() {
-        try {
-            ExecutionRequest request = new ExecutionRequest(
-                    PipelineType.MAPREDUCE,
-                    QueryType.QUERY1,
-                    1000,
-                    "sample_logs.txt");
-            PipelineOrchestrator orchestrator = new PipelineOrchestrator();
-            orchestrator.execute(request);
-            fail("Should throw UnsupportedOperationException for MapReduce");
-        } catch (UnsupportedOperationException e) {
-            assertTrue(e.getMessage().contains("Phase 2"));
-        } catch (Exception e) {
-            fail("Unexpected exception: " + e.getMessage());
-        }
-    }
 }

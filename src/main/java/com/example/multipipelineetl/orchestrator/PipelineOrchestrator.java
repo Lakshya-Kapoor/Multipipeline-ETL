@@ -4,11 +4,11 @@ import com.example.multipipelineetl.common.RunIdGenerator;
 import com.example.multipipelineetl.model.ExecutionContext;
 import com.example.multipipelineetl.model.ExecutionRequest;
 import com.example.multipipelineetl.model.PipelineType;
-import com.example.multipipelineetl.planner.NotImplementedQueryPlanner;
 import com.example.multipipelineetl.planner.QueryPlanner;
 import com.example.multipipelineetl.planner.mongo.MongoQueryPlanner;
 import com.example.multipipelineetl.planner.hive.HiveQueryPlanner;
 import com.example.multipipelineetl.planner.pig.PigQueryPlanner;
+import com.example.multipipelineetl.planner.mapreduce.MapReduceQueryPlanner;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -20,7 +20,7 @@ public class PipelineOrchestrator {
         planners.put(PipelineType.MONGO, new MongoQueryPlanner());
         planners.put(PipelineType.HIVE, new HiveQueryPlanner());
         planners.put(PipelineType.PIG, new PigQueryPlanner());
-        planners.put(PipelineType.MAPREDUCE, new NotImplementedQueryPlanner("MapReduceQueryPlanner"));
+        planners.put(PipelineType.MAPREDUCE, new MapReduceQueryPlanner());
     }
 
     public long execute(ExecutionRequest request) throws Exception {
