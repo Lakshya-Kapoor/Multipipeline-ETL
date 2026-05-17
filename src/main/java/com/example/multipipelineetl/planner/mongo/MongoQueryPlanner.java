@@ -2,8 +2,6 @@ package com.example.multipipelineetl.planner.mongo;
 
 import com.example.multipipelineetl.common.BatchFile;
 import com.example.multipipelineetl.common.BatchSplitter;
-import com.example.multipipelineetl.common.NasaLogParser;
-import com.example.multipipelineetl.common.ParsedLogRecord;
 import com.example.multipipelineetl.connection.PostgresConnectionFactory;
 import com.example.multipipelineetl.model.BatchMetadata;
 import com.example.multipipelineetl.model.ExecutionContext;
@@ -16,14 +14,11 @@ import com.example.multipipelineetl.pipeline.mongo.MongoQuery2Pipeline;
 import com.example.multipipelineetl.pipeline.mongo.MongoQuery3Pipeline;
 import com.example.multipipelineetl.planner.QueryPlanner;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class MongoQueryPlanner implements QueryPlanner {
     private Connection connection;
@@ -42,35 +37,29 @@ public class MongoQueryPlanner implements QueryPlanner {
         metadataRepository = new MetadataRepository(connection);
         queryResultRepository = new QueryResultRepository(connection);
         batchDirectory = Paths.get("target", "batches", "run_" + context.getRunId());
-        batches = new BatchSplitter().split(Paths.get(context.getRequest().getDatasetPath()), context.getRequest().getBatchSize(), batchDirectory);
+        batches = new BatchSplitter().split(Paths.get(context.getRequest().getDatasetPath()),
+                context.getRequest().getBatchSize(), batchDirectory);
     }
 
     public void execute(ExecutionContext context) throws Exception {
         for (BatchFile batch : batches) {
             long start = System.currentTimeMillis();
-            List<String> lines = Files.readAllLines(batch.getPath(), StandardCharsets.UTF_8);
-            List<ParsedLogRecord> parsedRows = new ArrayList<ParsedLogRecord>();
-            long malformed = 0L;
-            for (String line : lines) {
-                Optional<ParsedLogRecord> parsed = NasaLogParser.parse(line);
-                if (parsed.isPresent()) {
-                    parsedRows.add(parsed.get());
-                } else {
-                    malformed++;
-                }
-            }
+
             QueryType queryType = context.getRequest().getQueryType();
             if (queryType == QueryType.QUERY1 || queryType == QueryType.ALL) {
-                queryResultRepository.insertQuery1(context.getRunId(), batch.getBatchId(), "MONGO", query1Pipeline.aggregate(parsedRows));
+                query1Pipeline.execute(batch, context, queryResultRepository, connection);
             }
             if (queryType == QueryType.QUERY2 || queryType == QueryType.ALL) {
-                queryResultRepository.insertQuery2(context.getRunId(), batch.getBatchId(), "MONGO", query2Pipeline.aggregate(parsedRows));
+                query2Pipeline.execute(batch, context, queryResultRepository, connection);
             }
             if (queryType == QueryType.QUERY3 || queryType == QueryType.ALL) {
-                queryResultRepository.insertQuery3(context.getRunId(), batch.getBatchId(), "MONGO", query3Pipeline.aggregate(parsedRows));
+                query3Pipeline.execute(batch, context, queryResultRepository, connection);
             }
+
             long runtime = System.currentTimeMillis() - start;
-            metadataRepository.insertBatch(new BatchMetadata(context.getRunId(), batch.getBatchId(), parsedRows.size(), malformed, runtime));
+            long recordCount = batch.getRecords();
+            metadataRepository
+                    .insertBatch(new BatchMetadata(context.getRunId(), batch.getBatchId(), recordCount, 0, runtime));
         }
     }
 
@@ -90,4 +79,3 @@ public class MongoQueryPlanner implements QueryPlanner {
         }
     }
 }
-
