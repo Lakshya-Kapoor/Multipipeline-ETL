@@ -72,41 +72,34 @@ public class MongoQuery2Pipeline {
         MongoDatabase db = MongoConnectionFactory.getDatabase();
         MongoCollection<Document> collection = db.getCollection(TEMP_COLLECTION_NAME);
 
-        Map<String, long[]> metrics = new HashMap<>();
-        Map<String, Set<String>> hosts = new HashMap<>();
+        List<Document> pipeline = new ArrayList<>();
+        pipeline.add(new Document("$group", new Document()
+                .append("_id", "$resourcePath")
+                .append("requestCount", new Document("$sum", 1))
+                .append("totalBytes", new Document("$sum", "$bytes"))
+                .append("distinctHosts", new Document("$addToSet", "$host"))));
+        
+        pipeline.add(new Document("$project", new Document()
+                .append("_id", 0)
+                .append("resourcePath", "$_id")
+                .append("requestCount", 1)
+                .append("totalBytes", 1)
+                .append("distinctHostCount", new Document("$size", "$distinctHosts"))));
+        
+        pipeline.add(new Document("$sort", new Document("requestCount", -1)));
+        pipeline.add(new Document("$limit", 20));
 
-        for (Document doc : collection.find()) {
-            String path = doc.getString("resourcePath");
-            long[] stats = metrics.get(path);
-            if (stats == null) {
-                stats = new long[] { 0L, 0L };
-                metrics.put(path, stats);
-            }
-            stats[0]++;
-            stats[1] += doc.getLong("bytes");
+        List<Document> aggregatedDocs = collection.aggregate(pipeline).into(new ArrayList<>());
 
-            Set<String> hostSet = hosts.get(path);
-            if (hostSet == null) {
-                hostSet = new HashSet<>();
-                hosts.put(path, hostSet);
-            }
-            hostSet.add(doc.getString("host"));
+        List<Query2Result> results = new ArrayList<>();
+        for (Document doc : aggregatedDocs) {
+            results.add(new Query2Result(
+                    doc.getString("resourcePath"),
+                    doc.getLong("requestCount"),
+                    doc.getLong("totalBytes"),
+                    doc.getLong("distinctHostCount")));
         }
-
-        List<Query2Result> all = new ArrayList<>();
-        for (Map.Entry<String, long[]> entry : metrics.entrySet()) {
-            String resource = entry.getKey();
-            long[] stats = entry.getValue();
-            all.add(new Query2Result(resource, stats[0], stats[1], hosts.get(resource).size()));
-        }
-
-        all.sort(new Comparator<Query2Result>() {
-            public int compare(Query2Result left, Query2Result right) {
-                return Long.compare(right.getRequestCount(), left.getRequestCount());
-            }
-        });
-
-        return all.subList(0, Math.min(20, all.size()));
+        return results;
     }
 
     private void cleanupMongoDB() throws Exception {

@@ -71,23 +71,30 @@ public class MongoQuery1Pipeline {
         MongoDatabase db = MongoConnectionFactory.getDatabase();
         MongoCollection<Document> collection = db.getCollection(TEMP_COLLECTION_NAME);
 
-        Map<String, long[]> aggregated = new HashMap<>();
-        for (Document doc : collection.find()) {
-            String key = doc.getString("logDate") + "|" + doc.getInteger("statusCode");
-            long[] stats = aggregated.get(key);
-            if (stats == null) {
-                stats = new long[] { 0L, 0L };
-                aggregated.put(key, stats);
-            }
-            stats[0]++;
-            stats[1] += doc.getLong("bytes");
-        }
+        List<Document> pipeline = new ArrayList<>();
+        pipeline.add(new Document("$group", new Document()
+                .append("_id", new Document()
+                        .append("logDate", "$logDate")
+                        .append("statusCode", "$statusCode"))
+                .append("requestCount", new Document("$sum", 1))
+                .append("totalBytes", new Document("$sum", "$bytes"))));
+        
+        pipeline.add(new Document("$project", new Document()
+                .append("_id", 0)
+                .append("logDate", "$_id.logDate")
+                .append("statusCode", "$_id.statusCode")
+                .append("requestCount", 1)
+                .append("totalBytes", 1)));
+
+        List<Document> aggregatedDocs = collection.aggregate(pipeline).into(new ArrayList<>());
 
         List<Query1Result> results = new ArrayList<>();
-        for (Map.Entry<String, long[]> entry : aggregated.entrySet()) {
-            String[] keyParts = entry.getKey().split("\\|");
-            long[] stats = entry.getValue();
-            results.add(new Query1Result(Date.valueOf(keyParts[0]), Integer.parseInt(keyParts[1]), stats[0], stats[1]));
+        for (Document doc : aggregatedDocs) {
+            results.add(new Query1Result(
+                    Date.valueOf(doc.getString("logDate")),
+                    doc.getInteger("statusCode"),
+                    doc.getLong("requestCount"),
+                    doc.getLong("totalBytes")));
         }
         return results;
     }

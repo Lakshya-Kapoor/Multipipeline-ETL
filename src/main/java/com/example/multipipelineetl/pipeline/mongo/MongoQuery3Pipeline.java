@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -73,41 +74,57 @@ public class MongoQuery3Pipeline {
         MongoDatabase db = MongoConnectionFactory.getDatabase();
         MongoCollection<Document> collection = db.getCollection(TEMP_COLLECTION_NAME);
 
-        Map<String, long[]> counters = new HashMap<>();
-        Map<String, Set<String>> errorHosts = new HashMap<>();
+        List<Document> pipeline = new ArrayList<>();
+        
+        // Group by logDate and logHour, aggregating request counts and error host information
+        pipeline.add(new Document("$group", new Document()
+                .append("_id", new Document()
+                        .append("logDate", "$logDate")
+                        .append("logHour", "$logHour"))
+                .append("totalRequestCount", new Document("$sum", 1))
+                .append("errorRequestCount", new Document("$sum", new Document("$cond", Arrays.asList(
+                        new Document("$and", new ArrayList<Object>() {{
+                            add(new Document("$gte", Arrays.asList("$statusCode", 400)));
+                            add(new Document("$lte", Arrays.asList("$statusCode", 599)));
+                        }}),
+                        1,
+                        0))))
+                .append("errorHosts", new Document("$addToSet", new Document("$cond", Arrays.asList(
+                        new Document("$and", new ArrayList<Object>() {{
+                            add(new Document("$gte", Arrays.asList("$statusCode", 400)));
+                            add(new Document("$lte", Arrays.asList("$statusCode", 599)));
+                        }}),
+                        "$host",
+                        null))))));
+        
+        // Project the final output format
+        pipeline.add(new Document("$project", new Document()
+                .append("_id", 0)
+                .append("logDate", "$_id.logDate")
+                .append("logHour", "$_id.logHour")
+                .append("errorRequestCount", 1)
+                .append("totalRequestCount", 1)
+                .append("distinctErrorHosts", new Document("$size", 
+                        new Document("$filter", new Document()
+                                .append("input", "$errorHosts")
+                                .append("as", "host")
+                                .append("cond", new Document("$ne", Arrays.asList("$$host", null))))))
+                .append("errorRate", new Document("$cond", Arrays.asList(
+                        new Document("$eq", Arrays.asList("$totalRequestCount", 0)),
+                        0.0,
+                        new Document("$divide", Arrays.asList("$errorRequestCount", "$totalRequestCount")))))));
 
-        for (Document doc : collection.find()) {
-            String key = doc.getString("logDate") + "|" + doc.getInteger("logHour");
-            long[] stats = counters.get(key);
-            if (stats == null) {
-                stats = new long[] { 0L, 0L };
-                counters.put(key, stats);
-            }
-            stats[1]++;
-
-            int statusCode = doc.getInteger("statusCode");
-            if (statusCode >= 400 && statusCode <= 599) {
-                stats[0]++;
-                Set<String> hosts = errorHosts.get(key);
-                if (hosts == null) {
-                    hosts = new HashSet<>();
-                    errorHosts.put(key, hosts);
-                }
-                hosts.add(doc.getString("host"));
-            }
-        }
+        List<Document> aggregatedDocs = collection.aggregate(pipeline).into(new ArrayList<>());
 
         List<Query3Result> results = new ArrayList<>();
-        for (Map.Entry<String, long[]> entry : counters.entrySet()) {
-            String[] keyParts = entry.getKey().split("\\|");
-            long[] stats = entry.getValue();
-            long errorCount = stats[0];
-            long totalCount = stats[1];
-            double rate = totalCount == 0 ? 0.0 : ((double) errorCount / (double) totalCount);
-            Set<String> hosts = errorHosts.get(entry.getKey());
-            long distinctErrorHosts = hosts == null ? 0L : hosts.size();
-            results.add(new Query3Result(Date.valueOf(keyParts[0]), Integer.parseInt(keyParts[1]), errorCount,
-                    totalCount, rate, distinctErrorHosts));
+        for (Document doc : aggregatedDocs) {
+            results.add(new Query3Result(
+                    Date.valueOf(doc.getString("logDate")),
+                    doc.getInteger("logHour"),
+                    doc.getLong("errorRequestCount"),
+                    doc.getLong("totalRequestCount"),
+                    doc.getDouble("errorRate"),
+                    doc.getLong("distinctErrorHosts")));
         }
         return results;
     }
