@@ -14,7 +14,7 @@ public class BatchSplitter {
             throw new IllegalArgumentException("batchSize must be > 0");
         }
         Files.createDirectories(outputDirectory);
-        List<String> lines = Files.readAllLines(datasetPath, StandardCharsets.UTF_8);
+        List<String> lines = Files.readAllLines(datasetPath, StandardCharsets.ISO_8859_1);
         List<BatchFile> batches = new ArrayList<BatchFile>();
         int batchId = 1;
         for (int start = 0; start < lines.size(); start += batchSize) {
