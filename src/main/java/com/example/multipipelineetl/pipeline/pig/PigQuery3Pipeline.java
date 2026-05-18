@@ -5,8 +5,6 @@ import com.example.multipipelineetl.common.PigScriptGenerator;
 import com.example.multipipelineetl.model.ExecutionContext;
 import com.example.multipipelineetl.model.Query3Result;
 import com.example.multipipelineetl.persistence.QueryResultRepository;
-import org.apache.pig.ExecType;
-import org.apache.pig.PigServer;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,10 +18,10 @@ public class PigQuery3Pipeline {
     private static final String OUTPUT_RELATIVE = "target/pig_results/query3_batch_";
 
     public void execute(BatchFile batch, ExecutionContext context, QueryResultRepository resultRepository,
-                        Connection postgresConnection) throws Exception {
+            Connection postgresConnection) throws Exception {
         String outputPath = OUTPUT_RELATIVE + batch.getBatchId();
         Path outputDir = Paths.get(outputPath);
-        
+
         // Clean up output directory if it exists
         if (Files.exists(outputDir)) {
             Files.walk(outputDir)
@@ -40,16 +38,25 @@ public class PigQuery3Pipeline {
 
         // Generate Pig Latin script
         String pigScript = PigScriptGenerator.generateQuery3Script(batchFilePath, outputPath);
-        
+
         // Create temp script file
         Path scriptPath = Paths.get("target", "pig_scripts", "query3_batch_" + batch.getBatchId() + ".pig");
         Files.createDirectories(scriptPath.getParent());
         PigScriptGenerator.writePigScript(pigScript, scriptPath);
 
         try {
-            // Execute Pig script in local mode
-            PigServer pigServer = new PigServer(ExecType.LOCAL);
-            pigServer.registerScript(scriptPath.toString());
+            // Execute Pig script via CLI in local mode
+            ProcessBuilder pb = new ProcessBuilder(
+                    "pig",
+                    "-x", "local",
+                    scriptPath.toString());
+
+            pb.inheritIO(); // Show Pig output
+            int exitCode = pb.start().waitFor();
+
+            if (exitCode != 0) {
+                throw new Exception("Pig script execution failed with exit code: " + exitCode);
+            }
 
             // Read results from output
             List<Query3Result> results = readQuery3Results(outputPath);
@@ -92,16 +99,33 @@ public class PigQuery3Pipeline {
                     double errorRate = Double.parseDouble(parts[4].trim());
                     long distinctErrorHosts = Long.parseLong(parts[5].trim());
 
-                    results.add(new Query3Result(
-                            Date.valueOf(logDateStr),
-                            logHour,
-                            errorCount,
-                            totalCount,
-                            errorRate,
-                            distinctErrorHosts));
+                    try {
+                        String normalizedDate = normalizeDate(logDateStr);
+                        results.add(new Query3Result(
+                                Date.valueOf(normalizedDate),
+                                logHour,
+                                errorCount,
+                                totalCount,
+                                errorRate,
+                                distinctErrorHosts));
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("DEBUG: Failed to parse date '" + logDateStr + "' normalized to '"
+                                + normalizeDate(logDateStr) + "'");
+                        throw e;
+                    }
                 }
             }
         }
         return results;
+    }
+
+    private String normalizeDate(String dateStr) {
+        // Pig outputs as "YYYY-MMM-DD" e.g., "1995-Jul-01"
+        // Need to convert to "YYYY-MM-DD" format for SQL Date
+        dateStr = dateStr.replace("Jan", "01").replace("Feb", "02").replace("Mar", "03").replace("Apr", "04")
+                .replace("May", "05").replace("Jun", "06").replace("Jul", "07").replace("Aug", "08")
+                .replace("Sep", "09").replace("Oct", "10").replace("Nov", "11").replace("Dec", "12");
+        // Now format is YYYY-MM-DD (already correct)
+        return dateStr;
     }
 }

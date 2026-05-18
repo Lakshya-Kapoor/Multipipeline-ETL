@@ -93,8 +93,8 @@ public class MongoQuery1Pipeline {
             results.add(new Query1Result(
                     Date.valueOf(doc.getString("logDate")),
                     doc.getInteger("statusCode"),
-                    doc.getLong("requestCount"),
-                    doc.getLong("totalBytes")));
+                    ((Number) doc.get("requestCount")).longValue(),
+                    ((Number) doc.get("totalBytes")).longValue()));
         }
         return results;
     }
