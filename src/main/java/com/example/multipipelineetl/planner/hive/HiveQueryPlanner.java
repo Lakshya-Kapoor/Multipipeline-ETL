@@ -1,7 +1,7 @@
 package com.example.multipipelineetl.planner.hive;
 
 import com.example.multipipelineetl.common.BatchFile;
-import com.example.multipipelineetl.common.BatchSplitter;
+import com.example.multipipelineetl.common.HiveBatchSplitter;
 import com.example.multipipelineetl.connection.HiveConnectionFactory;
 import com.example.multipipelineetl.connection.PostgresConnectionFactory;
 import com.example.multipipelineetl.model.BatchMetadata;
@@ -49,7 +49,7 @@ public class HiveQueryPlanner implements QueryPlanner {
         
         // Split dataset into batches
         batchDirectory = Paths.get("target", "batches", "run_" + context.getRunId());
-        batches = new BatchSplitter().split(
+        batches = new HiveBatchSplitter().split(
                 Paths.get(context.getRequest().getDatasetPath()),
                 context.getRequest().getBatchSize(),
                 batchDirectory);
@@ -62,14 +62,17 @@ public class HiveQueryPlanner implements QueryPlanner {
             
             QueryType queryType = context.getRequest().getQueryType();
             
+            // Use HDFS path if available, otherwise use local absolute path
+            String batchPath = batch.getHdfsPath() != null ? batch.getHdfsPath() : batch.getPath().toAbsolutePath().toString();
+            
             if (queryType == QueryType.QUERY1 || queryType == QueryType.ALL) {
-                query1Pipeline.execute(batch, context, queryResultRepository, hiveConnection);
+                query1Pipeline.execute(batch, batchPath, context, queryResultRepository, hiveConnection);
             }
             if (queryType == QueryType.QUERY2 || queryType == QueryType.ALL) {
-                query2Pipeline.execute(batch, context, queryResultRepository, hiveConnection);
+                query2Pipeline.execute(batch, batchPath, context, queryResultRepository, hiveConnection);
             }
             if (queryType == QueryType.QUERY3 || queryType == QueryType.ALL) {
-                query3Pipeline.execute(batch, context, queryResultRepository, hiveConnection);
+                query3Pipeline.execute(batch, batchPath, context, queryResultRepository, hiveConnection);
             }
             
             long runtime = System.currentTimeMillis() - startTime;

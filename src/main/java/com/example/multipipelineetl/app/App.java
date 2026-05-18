@@ -6,6 +6,7 @@ import com.example.multipipelineetl.model.QueryType;
 import com.example.multipipelineetl.orchestrator.PipelineOrchestrator;
 import com.example.multipipelineetl.reporting.ReportService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class App {
@@ -66,10 +67,29 @@ public class App {
             throw new IllegalArgumentException("Invalid query selection.");
         }
 
-        System.out.print("Batch size: ");
-        int batchSize = Integer.parseInt(scanner.nextLine().trim());
         System.out.print("Dataset path: ");
         String datasetPath = scanner.nextLine().trim();
+        System.out.print("Number of batches: ");
+        int numBatches = Integer.parseInt(scanner.nextLine().trim());
+        
+        int batchSize = calculateBatchSize(datasetPath, numBatches);
         return new ExecutionRequest(pipelineType, queryType, batchSize, datasetPath);
+    }
+
+    private static int calculateBatchSize(String datasetPath, int numBatches) {
+        try {
+            int totalLines = countLines(datasetPath);
+            int batchSize = (totalLines + numBatches - 1) / numBatches;
+            System.out.println("File has " + totalLines + " records. Using batch size: " + batchSize);
+            return batchSize;
+        } catch (Exception e) {
+            System.err.println("Error reading file: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static int countLines(String filePath) throws Exception {
+        java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+        return (int) java.nio.file.Files.lines(path, java.nio.charset.StandardCharsets.ISO_8859_1).count();
     }
 }

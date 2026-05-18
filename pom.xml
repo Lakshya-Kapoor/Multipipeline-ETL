@@ -61,6 +61,27 @@
     </exclusions>
   </dependency>
 
+  <!-- Apache Thrift (required by Hive JDBC) -->
+  <dependency>
+    <groupId>org.apache.thrift</groupId>
+    <artifactId>libthrift</artifactId>
+    <version>0.13.0</version>
+  </dependency>
+
+  <!-- Hive Service RPC (contains Thrift generated classes for JDBC) -->
+  <dependency>
+    <groupId>org.apache.hive</groupId>
+    <artifactId>hive-service-rpc</artifactId>
+    <version>4.0.1</version>
+  </dependency>
+
+  <!-- Hive Service (contains CLI exception classes) -->
+  <dependency>
+    <groupId>org.apache.hive</groupId>
+    <artifactId>hive-service</artifactId>
+    <version>4.0.1</version>
+  </dependency>
+
   <!-- Pig -->
   <dependency>
     <groupId>org.apache.pig</groupId>

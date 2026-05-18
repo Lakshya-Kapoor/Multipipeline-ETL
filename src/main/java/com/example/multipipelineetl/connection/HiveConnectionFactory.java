@@ -13,7 +13,7 @@ public class HiveConnectionFactory {
         String hivePort = envRequired("HIVE_PORT");
         String hiveDatabase = envRequired("HIVE_DATABASE");
 
-        this.hiveUrl = String.format("jdbc:hive2://%s:%s/%s", hiveHost, hivePort, hiveDatabase);
+        this.hiveUrl = String.format("jdbc:hive2://%s:%s/%s;user=sahas", hiveHost, hivePort, hiveDatabase);
     }
 
     public Connection getConnection() throws SQLException, ClassNotFoundException {

@@ -17,20 +17,16 @@ public class HiveQuery1Pipeline {
     private static final String TABLE_PREFIX = "hive_query1_batch_";
     private static final String VIEW_NAME = "hive_query1_transformed";
 
-    public void execute(BatchFile batch, ExecutionContext context, QueryResultRepository resultRepository,
+    public void execute(BatchFile batch, String absoluteBatchPath, ExecutionContext context, QueryResultRepository resultRepository,
                         Connection hiveConnection) throws Exception {
         String tableName = TABLE_PREFIX + batch.getBatchId();
-        String batchFilePath = batch.getPath().toString();
 
         try {
-            // Create external table
-            HiveTableManager.createExternalTable(hiveConnection, tableName, batchFilePath);
-
-            // Create transformation view
-            HiveTableManager.createTransformationView(hiveConnection, VIEW_NAME, tableName);
+            // Create external table with absolute path
+            HiveTableManager.createExternalTable(hiveConnection, tableName, absoluteBatchPath);
 
             // Execute aggregation query
-            List<Query1Result> results = executeAggregation(hiveConnection);
+            List<Query1Result> results = executeAggregation(hiveConnection, tableName);
 
             // Load results to PostgreSQL
             resultRepository.insertQuery1(context.getRunId(), batch.getBatchId(), "HIVE", results);
@@ -41,16 +37,16 @@ public class HiveQuery1Pipeline {
         }
     }
 
-    private List<Query1Result> executeAggregation(Connection hiveConnection) throws Exception {
+    private List<Query1Result> executeAggregation(Connection hiveConnection, String tableName) throws Exception {
         String aggregationQuery = String.format(
                 "SELECT\n" +
-                "  log_date,\n" +
+                "  CAST(FROM_UNIXTIME(UNIX_TIMESTAMP(log_timestamp, 'dd/MMM/yyyy:HH:mm:ss Z'), 'yyyy-MM-dd') AS DATE) AS log_date,\n" +
                 "  status_code,\n" +
                 "  COUNT(*) AS request_count,\n" +
-                "  SUM(bytes) AS total_bytes\n" +
+                "  SUM(CASE WHEN bytes_transferred = -1 THEN 0 ELSE bytes_transferred END) AS total_bytes\n" +
                 "FROM %s\n" +
-                "GROUP BY log_date, status_code",
-                VIEW_NAME);
+                "GROUP BY CAST(FROM_UNIXTIME(UNIX_TIMESTAMP(log_timestamp, 'dd/MMM/yyyy:HH:mm:ss Z'), 'yyyy-MM-dd') AS DATE), status_code",
+                tableName);
 
         List<Query1Result> results = new ArrayList<>();
         try (Statement stmt = hiveConnection.createStatement()) {
