@@ -1,0 +1,89 @@
+Execution complete. run_id=1779126044657
+1. Execute
+2. Show Reports
+3. Exit
+2
+Enter run_id: 1779126044657
+===== EXECUTION SUMMARY: Run 1779126044657 Query 1 =====
+Total Batches:            8
+Total Records Processed:  1,569,898
+Total Malformed Records:  0
+Total Runtime:            48s
+Malformed Rate:           0%
+
+===== BATCH EXECUTION STATS Query 1 =====
+BATCH_ID | RECORDS_PROCESSED | MALFORMED_RECORDS  | RUNTIME      | BAD_RATE  
+--------------------------------------------------------------------------------
+1        |           196,238 |                  0 |           5s |         0%
+2        |           196,238 |                  0 |           5s |         0%
+3        |           196,238 |                  0 |           6s |         0%
+4        |           196,238 |                  0 |           6s |         0%
+5        |           196,238 |                  0 |           5s |         0%
+6        |           196,238 |                  0 |           6s |         0%
+7        |           196,238 |                  0 |           6s |         0%
+8        |           196,232 |                  0 |           5s |         0%
+
+===== EXECUTION SUMMARY: Run 1779126044657 Query 2 =====
+Total Batches:            8
+Total Records Processed:  1,569,898
+Total Malformed Records:  0
+Total Runtime:            1m 5s
+Malformed Rate:           0%
+
+===== BATCH EXECUTION STATS Query 2 =====
+BATCH_ID | RECORDS_PROCESSED | MALFORMED_RECORDS  | RUNTIME      | BAD_RATE  
+--------------------------------------------------------------------------------
+1        |           196,238 |                  0 |           8s |         0%
+2        |           196,238 |                  0 |           7s |         0%
+3        |           196,238 |                  0 |           8s |         0%
+4        |           196,238 |                  0 |           7s |         0%
+5        |           196,238 |                  0 |           7s |         0%
+6        |           196,238 |                  0 |           8s |         0%
+7        |           196,238 |                  0 |           8s |         0%
+8        |           196,232 |                  0 |           8s |         0%
+
+===== EXECUTION SUMMARY: Run 1779126044657 Query 3 =====
+Total Batches:            8
+Total Records Processed:  1,569,898
+Total Malformed Records:  0
+Total Runtime:            47s
+Malformed Rate:           0%
+
+===== BATCH EXECUTION STATS Query 3 =====
+BATCH_ID | RECORDS_PROCESSED | MALFORMED_RECORDS  | RUNTIME      | BAD_RATE  
+--------------------------------------------------------------------------------
+1        |           196,238 |                  0 |           5s |         0%
+2        |           196,238 |                  0 |           6s |         0%
+3        |           196,238 |                  0 |           6s |         0%
+4        |           196,238 |                  0 |           5s |         0%
+5        |           196,238 |                  0 |           6s |         0%
+6        |           196,238 |                  0 |           6s |         0%
+7        |           196,238 |                  0 |           5s |         0%
+8        |           196,232 |                  0 |           5s |         0%
+
+===== QUERY 1 RESULTS (Top 5 Rows - Aggregated) =====
+LOG_DATE     | STATUS | REQUEST_COUNT   | TOTAL_BYTES    
+-------------------------------------------------------
+1995-08-01   | 200    |          30,745 |     529,291,863
+1995-08-01   | 302    |             399 |          29,856
+1995-08-01   | 304    |           2,608 |               0
+1995-08-01   | 403    |               1 |               0
+1995-08-01   | 404    |             243 |               0
+
+===== QUERY 2 RESULTS (Top 5 Rows - Aggregated) =====
+RESOURCE_PATH                  | REQUEST_COUNT   | TOTAL_BYTES     | DISTINCT_HOSTS
+---------------------------------------------------------------------------
+/images/NASA-logosmall.gif     |          97,293 |      61,069,842 |     54,371
+/images/KSC-logosmall.gif      |          75,283 |      76,694,800 |     55,496
+/images/MOSAIC-logosmall.gif   |          67,356 |      21,161,448 |     40,515
+/images/USA-logosmall.gif      |          66,975 |      13,562,640 |     40,223
+/images/WORLD-logosmall.gif    |          66,351 |      38,497,605 |     39,863
+
+===== QUERY 3 RESULTS (Top 5 Rows - Aggregated) =====
+LOG_DATE     | HOUR  | ERROR_REQ     | TOTAL_REQ     | ERROR_RATE | ERROR_HOSTS
+---------------------------------------------------------------------------
+1995-08-01   |     0 |             4 |         1,642 |         0% |           4
+1995-08-01   |     1 |            19 |         1,385 |      0.01% |           8
+1995-08-01   |     2 |             5 |           993 |      0.01% |           2
+1995-08-01   |     3 |            85 |         1,219 |      0.07% |          16
+1995-08-01   |     4 |             1 |           985 |         0% |           1
