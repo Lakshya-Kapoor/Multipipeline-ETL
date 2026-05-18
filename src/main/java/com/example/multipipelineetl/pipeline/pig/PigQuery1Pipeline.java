@@ -5,8 +5,6 @@ import com.example.multipipelineetl.common.PigScriptGenerator;
 import com.example.multipipelineetl.model.ExecutionContext;
 import com.example.multipipelineetl.model.Query1Result;
 import com.example.multipipelineetl.persistence.QueryResultRepository;
-import org.apache.pig.ExecType;
-import org.apache.pig.PigServer;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,10 +18,10 @@ public class PigQuery1Pipeline {
     private static final String OUTPUT_RELATIVE = "target/pig_results/query1_batch_";
 
     public void execute(BatchFile batch, ExecutionContext context, QueryResultRepository resultRepository,
-                        Connection postgresConnection) throws Exception {
+            Connection postgresConnection) throws Exception {
         String outputPath = OUTPUT_RELATIVE + batch.getBatchId();
         Path outputDir = Paths.get(outputPath);
-        
+
         // Clean up output directory if it exists
         if (Files.exists(outputDir)) {
             Files.walk(outputDir)
@@ -40,16 +38,26 @@ public class PigQuery1Pipeline {
 
         // Generate Pig Latin script
         String pigScript = PigScriptGenerator.generateQuery1Script(batchFilePath, outputPath);
-        
+
         // Create temp script file
         Path scriptPath = Paths.get("target", "pig_scripts", "query1_batch_" + batch.getBatchId() + ".pig");
         Files.createDirectories(scriptPath.getParent());
         PigScriptGenerator.writePigScript(pigScript, scriptPath);
 
         try {
-            // Execute Pig script in local mode
-            PigServer pigServer = new PigServer(ExecType.LOCAL);
-            pigServer.registerScript(scriptPath.toString());
+            // Execute Pig script via CLI in local mode
+            ProcessBuilder pb = new ProcessBuilder(
+                "pig",
+                "-x", "local",
+                scriptPath.toString()
+            );
+            
+            pb.inheritIO();  // Show Pig output
+            int exitCode = pb.start().waitFor();
+            
+            if (exitCode != 0) {
+                throw new Exception("Pig script execution failed with exit code: " + exitCode);
+            }
 
             // Read results from output
             List<Query1Result> results = readQuery1Results(outputPath);

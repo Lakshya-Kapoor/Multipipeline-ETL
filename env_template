@@ -1,28 +1,32 @@
-# PostgreSQL Configuration
-PG_HOST=localhost
-PG_PORT=5432
-PG_DB=etl2
-PG_USER=etl
-PG_PASSWORD=pass
+# PostgreSQL
+export PG_HOST=localhost
+export PG_PORT=5432
+export PG_DB=etl2
+export PG_USER=etl
+export PG_PASSWORD=pass
+export PG_URL=jdbc:postgresql://localhost:5432/etl2
 
-# MongoDB Configuration
-MONGO_HOST=localhost
-MONGO_PORT=27017
-MONGO_DATABASE=etl
-MONGO_USER=etl_user
-MONGO_PASSWORD=pass
-MONGO_AUTH_SOURCE=etl
+# MongoDB
+export MONGO_HOST=localhost
+export MONGO_PORT=27017
+export MONGO_DATABASE=etl
+export MONGO_USER=etl_user
+export MONGO_PASSWORD=pass
+export MONGO_AUTH_SOURCE=etl
 
-# Hive Configuration
-HIVE_HOST=localhost
-HIVE_PORT=10000
-HIVE_DATABASE=default
+# Java 8
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
 
-# Tool Paths
-JAVA_HOME=/home/sahas/PROJECTS/multiPipelineEtl/jdk1.8.0_491
-HIVE_HOME=/home/sahas/PROJECTS/multiPipelineEtl/apache-hive-4.0.1-bin
-HADOOP_HOME=/home/sahas/PROJECTS/multiPipelineEtl/hadoop-3.4.3
-PIG_HOME=/home/sahas/PROJECTS/multiPipelineEtl/pig-0.17.0
+# Hadoop
+export HADOOP_HOME=/home/ubuntu/hadoop
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
 
-# Add tools to PATH
-export PATH=$JAVA_HOME/bin:$HIVE_HOME/bin:$HADOOP_HOME/bin:$PIG_HOME/bin:$PATH
+# Pig
+export PIG_HOME=/home/ubuntu/pig-0.17.0
+
+# Paths
+export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PIG_HOME/bin:$PATH
