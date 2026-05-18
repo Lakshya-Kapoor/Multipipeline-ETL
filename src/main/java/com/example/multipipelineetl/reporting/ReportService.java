@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ReportService {
     private static final DecimalFormat df = new DecimalFormat("#,###");
@@ -14,9 +16,22 @@ public class ReportService {
     public void printRunSummary(long runId) throws Exception {
         Connection connection = new PostgresConnectionFactory().getConnection();
         try {
-            printExecutionSummary(connection, runId);
-            System.out.println();
-            printBatchExecutionStats(connection, runId);
+            List<Integer> queryIds = getQueryIds(connection, runId);
+            if (queryIds.isEmpty()) {
+                printExecutionSummary(connection, runId, null);
+                System.out.println();
+                printBatchExecutionStats(connection, runId, null);
+            } else {
+                for (int i = 0; i < queryIds.size(); i++) {
+                    Integer queryId = queryIds.get(i);
+                    printExecutionSummary(connection, runId, queryId);
+                    System.out.println();
+                    printBatchExecutionStats(connection, runId, queryId);
+                    if (i < queryIds.size() - 1) {
+                        System.out.println();
+                    }
+                }
+            }
 
             boolean hasQuery1 = hasResults(connection, "query1_result", runId);
             boolean hasQuery2 = hasResults(connection, "query2_result", runId);
@@ -46,19 +61,21 @@ public class ReportService {
         }
     }
 
-    private void printExecutionSummary(Connection connection, long runId) throws Exception {
+    private void printExecutionSummary(Connection connection, long runId, Integer queryId) throws Exception {
         Statement statement = connection.createStatement();
         try {
+            String queryFilter = queryId == null ? "" : " AND query_id = " + queryId;
             ResultSet rs = statement.executeQuery(
-                    "SELECT COUNT(*) as total_batches, SUM(records_processed) as total_records, SUM(malformed_records) as total_malformed, SUM(batch_runtime_ms) as total_runtime " +
-                    "FROM batch_execution_metadata WHERE run_id = " + runId);
+                    "SELECT COUNT(DISTINCT batch_id) as total_batches, SUM(records_processed) as total_records, SUM(malformed_records) as total_malformed, SUM(batch_runtime_ms) as total_runtime " +
+                    "FROM batch_execution_metadata WHERE run_id = " + runId + queryFilter);
             if (rs.next()) {
                 long totalBatches = rs.getLong(1);
                 long totalRecords = rs.getLong(2);
                 long totalMalformed = rs.getLong(3);
                 long totalRuntime = rs.getLong(4);
 
-                System.out.println("===== EXECUTION SUMMARY: Run " + runId + " =====");
+                String queryLabel = queryId == null ? "" : " Query " + queryId;
+                System.out.println("===== EXECUTION SUMMARY: Run " + runId + queryLabel + " =====");
                 System.out.println("Total Batches:            " + df.format(totalBatches));
                 System.out.println("Total Records Processed:  " + df.format(totalRecords));
                 System.out.println("Total Malformed Records:  " + df.format(totalMalformed));
@@ -73,15 +90,17 @@ public class ReportService {
         }
     }
 
-    private void printBatchExecutionStats(Connection connection, long runId) throws Exception {
+    private void printBatchExecutionStats(Connection connection, long runId, Integer queryId) throws Exception {
         Statement statement = connection.createStatement();
         try {
+            String queryFilter = queryId == null ? "" : " AND query_id = " + queryId;
             ResultSet rs = statement.executeQuery(
                     "SELECT batch_id, records_processed, malformed_records, batch_runtime_ms " +
-                            "FROM batch_execution_metadata WHERE run_id = " + runId + " " +
+                            "FROM batch_execution_metadata WHERE run_id = " + runId + queryFilter + " " +
                             "ORDER BY batch_id");
 
-            System.out.println("===== BATCH EXECUTION STATS =====");
+            String queryLabel = queryId == null ? "" : " Query " + queryId;
+            System.out.println("===== BATCH EXECUTION STATS" + queryLabel + " =====");
             System.out.println(String.format("%-8s | %-17s | %-18s | %-12s | %-10s",
                     "BATCH_ID", "RECORDS_PROCESSED", "MALFORMED_RECORDS", "RUNTIME", "BAD_RATE"));
             printSeparator(80);
@@ -103,6 +122,23 @@ public class ReportService {
             if (!hasResults) {
                 System.out.println("(No batch metadata found for this run)");
             }
+        } finally {
+            statement.close();
+        }
+    }
+
+    private List<Integer> getQueryIds(Connection connection, long runId) throws Exception {
+        Statement statement = connection.createStatement();
+        try {
+            ResultSet rs = statement.executeQuery(
+                    "SELECT DISTINCT query_id FROM batch_execution_metadata " +
+                            "WHERE run_id = " + runId + " AND query_id IS NOT NULL " +
+                            "ORDER BY query_id");
+            List<Integer> queryIds = new ArrayList<Integer>();
+            while (rs.next()) {
+                queryIds.add(rs.getInt(1));
+            }
+            return queryIds;
         } finally {
             statement.close();
         }

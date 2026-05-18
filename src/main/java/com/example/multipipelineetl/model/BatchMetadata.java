@@ -2,13 +2,15 @@ package com.example.multipipelineetl.model;
 
 public class BatchMetadata {
     private final long runId;
+    private final int queryId;
     private final int batchId;
     private final long recordsProcessed;
     private final long malformedRecords;
     private final long batchRuntimeMs;
 
-    public BatchMetadata(long runId, int batchId, long recordsProcessed, long malformedRecords, long batchRuntimeMs) {
+    public BatchMetadata(long runId, int queryId, int batchId, long recordsProcessed, long malformedRecords, long batchRuntimeMs) {
         this.runId = runId;
+        this.queryId = queryId;
         this.batchId = batchId;
         this.recordsProcessed = recordsProcessed;
         this.malformedRecords = malformedRecords;
@@ -23,6 +25,10 @@ public class BatchMetadata {
         return batchId;
     }
 
+    public int getQueryId() {
+        return queryId;
+    }
+
     public long getRecordsProcessed() {
         return recordsProcessed;
     }
@@ -35,4 +41,3 @@ public class BatchMetadata {
         return batchRuntimeMs;
     }
 }
-

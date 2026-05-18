@@ -58,27 +58,33 @@ public class HiveQueryPlanner implements QueryPlanner {
     @Override
     public void execute(ExecutionContext context) throws Exception {
         for (BatchFile batch : batches) {
-            long startTime = System.currentTimeMillis();
-            
             QueryType queryType = context.getRequest().getQueryType();
+            long recordCount = batch.getRecords();
             
             // Use HDFS path if available, otherwise use local absolute path
             String batchPath = batch.getHdfsPath() != null ? batch.getHdfsPath() : batch.getPath().toAbsolutePath().toString();
             
             if (queryType == QueryType.QUERY1 || queryType == QueryType.ALL) {
+                long startTime = System.currentTimeMillis();
                 query1Pipeline.execute(batch, batchPath, context, queryResultRepository, hiveConnection);
+                long runtime = System.currentTimeMillis() - startTime;
+                metadataRepository.insertBatch(
+                        new BatchMetadata(context.getRunId(), 1, batch.getBatchId(), recordCount, 0, runtime));
             }
             if (queryType == QueryType.QUERY2 || queryType == QueryType.ALL) {
+                long startTime = System.currentTimeMillis();
                 query2Pipeline.execute(batch, batchPath, context, queryResultRepository, hiveConnection);
+                long runtime = System.currentTimeMillis() - startTime;
+                metadataRepository.insertBatch(
+                        new BatchMetadata(context.getRunId(), 2, batch.getBatchId(), recordCount, 0, runtime));
             }
             if (queryType == QueryType.QUERY3 || queryType == QueryType.ALL) {
+                long startTime = System.currentTimeMillis();
                 query3Pipeline.execute(batch, batchPath, context, queryResultRepository, hiveConnection);
+                long runtime = System.currentTimeMillis() - startTime;
+                metadataRepository.insertBatch(
+                        new BatchMetadata(context.getRunId(), 3, batch.getBatchId(), recordCount, 0, runtime));
             }
-            
-            long runtime = System.currentTimeMillis() - startTime;
-            long recordCount = batch.getRecords();
-            metadataRepository.insertBatch(
-                    new BatchMetadata(context.getRunId(), batch.getBatchId(), recordCount, 0, runtime));
         }
     }
 

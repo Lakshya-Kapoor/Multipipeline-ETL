@@ -11,12 +11,14 @@ public class SchemaInitializer {
             statement.execute("CREATE TABLE IF NOT EXISTS batch_execution_metadata (" +
                     "id BIGSERIAL PRIMARY KEY," +
                     "run_id BIGINT," +
+                    "query_id INT," +
                     "batch_id INT," +
                     "records_processed BIGINT," +
                     "malformed_records BIGINT," +
                     "batch_runtime_ms BIGINT," +
                     "batch_start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
                     "batch_end_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            statement.execute("ALTER TABLE batch_execution_metadata ADD COLUMN IF NOT EXISTS query_id INT");
             statement.execute("CREATE TABLE IF NOT EXISTS query1_result (" +
                     "id BIGSERIAL PRIMARY KEY," +
                     "run_id BIGINT," +
@@ -51,4 +53,3 @@ public class SchemaInitializer {
         }
     }
 }
-
