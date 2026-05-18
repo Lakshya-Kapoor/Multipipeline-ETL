@@ -39,7 +39,7 @@ public class MongoQuery2Pipeline {
     }
 
     private List<ParsedLogRecord> parseLogFile(BatchFile batch) throws Exception {
-        List<String> lines = Files.readAllLines(batch.getPath(), StandardCharsets.UTF_8);
+        List<String> lines = Files.readAllLines(batch.getPath(), StandardCharsets.ISO_8859_1);
         List<ParsedLogRecord> parsedRows = new ArrayList<>();
         for (String line : lines) {
             Optional<ParsedLogRecord> parsed = NasaLogParser.parse(line);

@@ -16,11 +16,31 @@ public class ReportService {
         try {
             printExecutionSummary(connection, runId);
             System.out.println();
-            printQuery1Results(connection, runId);
-            System.out.println();
-            printQuery2Results(connection, runId);
-            System.out.println();
-            printQuery3Results(connection, runId);
+            printBatchExecutionStats(connection, runId);
+
+            boolean hasQuery1 = hasResults(connection, "query1_result", runId);
+            boolean hasQuery2 = hasResults(connection, "query2_result", runId);
+            boolean hasQuery3 = hasResults(connection, "query3_result", runId);
+
+            if (!hasQuery1 && !hasQuery2 && !hasQuery3) {
+                System.out.println();
+                System.out.println("===== QUERY RESULTS =====");
+                System.out.println("(No query results found for this run)");
+                return;
+            }
+
+            if (hasQuery1) {
+                System.out.println();
+                printQuery1Results(connection, runId);
+            }
+            if (hasQuery2) {
+                System.out.println();
+                printQuery2Results(connection, runId);
+            }
+            if (hasQuery3) {
+                System.out.println();
+                printQuery3Results(connection, runId);
+            }
         } finally {
             connection.close();
         }
@@ -30,14 +50,16 @@ public class ReportService {
         Statement statement = connection.createStatement();
         try {
             ResultSet rs = statement.executeQuery(
-                    "SELECT SUM(records_processed) as total_records, SUM(malformed_records) as total_malformed, SUM(batch_runtime_ms) as total_runtime " +
+                    "SELECT COUNT(*) as total_batches, SUM(records_processed) as total_records, SUM(malformed_records) as total_malformed, SUM(batch_runtime_ms) as total_runtime " +
                     "FROM batch_execution_metadata WHERE run_id = " + runId);
             if (rs.next()) {
-                long totalRecords = rs.getLong(1);
-                long totalMalformed = rs.getLong(2);
-                long totalRuntime = rs.getLong(3);
-                
+                long totalBatches = rs.getLong(1);
+                long totalRecords = rs.getLong(2);
+                long totalMalformed = rs.getLong(3);
+                long totalRuntime = rs.getLong(4);
+
                 System.out.println("===== EXECUTION SUMMARY: Run " + runId + " =====");
+                System.out.println("Total Batches:            " + df.format(totalBatches));
                 System.out.println("Total Records Processed:  " + df.format(totalRecords));
                 System.out.println("Total Malformed Records:  " + df.format(totalMalformed));
                 System.out.println("Total Runtime:            " + formatRuntime(totalRuntime));
@@ -46,6 +68,55 @@ public class ReportService {
                     System.out.println("Malformed Rate:           " + df2.format(malformedPct) + "%");
                 }
             }
+        } finally {
+            statement.close();
+        }
+    }
+
+    private void printBatchExecutionStats(Connection connection, long runId) throws Exception {
+        Statement statement = connection.createStatement();
+        try {
+            ResultSet rs = statement.executeQuery(
+                    "SELECT batch_id, records_processed, malformed_records, batch_runtime_ms " +
+                            "FROM batch_execution_metadata WHERE run_id = " + runId + " " +
+                            "ORDER BY batch_id");
+
+            System.out.println("===== BATCH EXECUTION STATS =====");
+            System.out.println(String.format("%-8s | %-17s | %-18s | %-12s | %-10s",
+                    "BATCH_ID", "RECORDS_PROCESSED", "MALFORMED_RECORDS", "RUNTIME", "BAD_RATE"));
+            printSeparator(80);
+
+            boolean hasResults = false;
+            while (rs.next()) {
+                hasResults = true;
+                long records = rs.getLong(2);
+                long malformed = rs.getLong(3);
+                double malformedPct = records == 0 ? 0.0 : ((double) malformed / records) * 100;
+                System.out.println(String.format("%-8d | %17s | %18s | %12s | %9s%%",
+                        rs.getInt(1),
+                        df.format(records),
+                        df.format(malformed),
+                        formatRuntime(rs.getLong(4)),
+                        df2.format(malformedPct)));
+            }
+
+            if (!hasResults) {
+                System.out.println("(No batch metadata found for this run)");
+            }
+        } finally {
+            statement.close();
+        }
+    }
+
+    private boolean hasResults(Connection connection, String tableName, long runId) throws Exception {
+        Statement statement = connection.createStatement();
+        try {
+            ResultSet rs = statement.executeQuery(
+                    "SELECT EXISTS (SELECT 1 FROM " + tableName + " WHERE run_id = " + runId + ")");
+            if (rs.next()) {
+                return rs.getBoolean(1);
+            }
+            return false;
         } finally {
             statement.close();
         }
@@ -169,4 +240,3 @@ public class ReportService {
         return secs + "s";
     }
 }
-
