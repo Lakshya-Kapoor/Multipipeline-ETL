@@ -118,6 +118,12 @@
 
           <configuration>
 
+            <transformers>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <mainClass>com.example.multipipelineetl.app.App</mainClass>
+              </transformer>
+            </transformers>
+
             <filters>
               <filter>
                 <artifact>*:*</artifact>
