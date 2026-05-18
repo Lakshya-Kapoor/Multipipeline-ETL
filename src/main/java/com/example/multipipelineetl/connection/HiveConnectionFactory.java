@@ -9,13 +9,9 @@ public class HiveConnectionFactory {
     private String hiveUrl;
 
     public HiveConnectionFactory() {
-        String hiveHost = System.getenv("HIVE_HOST");
-        String hivePort = System.getenv("HIVE_PORT");
-        String hiveDatabase = System.getenv("HIVE_DATABASE");
-
-        if (hiveHost == null) hiveHost = "localhost";
-        if (hivePort == null) hivePort = "10000";
-        if (hiveDatabase == null) hiveDatabase = "default";
+        String hiveHost = envRequired("HIVE_HOST");
+        String hivePort = envRequired("HIVE_PORT");
+        String hiveDatabase = envRequired("HIVE_DATABASE");
 
         this.hiveUrl = String.format("jdbc:hive2://%s:%s/%s", hiveHost, hivePort, hiveDatabase);
     }
@@ -23,5 +19,13 @@ public class HiveConnectionFactory {
     public Connection getConnection() throws SQLException, ClassNotFoundException {
         Class.forName(HIVE_DRIVER);
         return DriverManager.getConnection(hiveUrl);
+    }
+
+    private String envRequired(String key) {
+        String value = System.getenv(key);
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalStateException("Missing required environment variable: " + key);
+        }
+        return value;
     }
 }
