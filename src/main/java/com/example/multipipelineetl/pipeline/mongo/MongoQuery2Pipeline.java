@@ -95,9 +95,9 @@ public class MongoQuery2Pipeline {
         for (Document doc : aggregatedDocs) {
             results.add(new Query2Result(
                     doc.getString("resourcePath"),
-                    doc.getLong("requestCount"),
-                    doc.getLong("totalBytes"),
-                    doc.getLong("distinctHostCount")));
+                    ((Number) doc.get("requestCount")).longValue(),
+                    ((Number) doc.get("totalBytes")).longValue(),
+                    ((Number) doc.get("distinctHostCount")).longValue()));
         }
         return results;
     }

@@ -122,6 +122,7 @@
               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                 <mainClass>com.example.multipipelineetl.app.App</mainClass>
               </transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
             </transformers>
 
             <filters>
@@ -132,6 +133,7 @@
                   <exclude>META-INF/*.SF</exclude>
                   <exclude>META-INF/*.DSA</exclude>
                   <exclude>META-INF/*.RSA</exclude>
+                  <exclude>META-INF/services/java.net.spi.InetAddressResolverProvider</exclude>
                 </excludes>
 
               </filter>
