@@ -122,6 +122,7 @@
               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                 <mainClass>com.example.multipipelineetl.app.App</mainClass>
               </transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
             </transformers>
 
             <filters>

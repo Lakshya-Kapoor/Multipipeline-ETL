@@ -29,6 +29,7 @@
                 <transformer>
                   <mainClass>com.example.multipipelineetl.app.App</mainClass>
                 </transformer>
+                <transformer />
               </transformers>
               <filters>
                 <filter>
@@ -56,7 +57,7 @@
     </dependency>
   </dependencies>
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
   </properties>
 </project>

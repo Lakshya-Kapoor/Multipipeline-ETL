@@ -39,6 +39,7 @@ public class MapReduceQueryPlanner implements QueryPlanner {
         // Initialize Hadoop configuration
         hadoopConfig = new Configuration();
         hadoopConfig.set("fs.defaultFS", "file:///");
+        hadoopConfig.set("mapreduce.framework.name", "local");
         hdfs = FileSystem.get(hadoopConfig);
         
         // Initialize PostgreSQL connection for metadata and results
