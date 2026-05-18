@@ -121,10 +121,10 @@ public class MongoQuery3Pipeline {
             results.add(new Query3Result(
                     Date.valueOf(doc.getString("logDate")),
                     doc.getInteger("logHour"),
-                    doc.getLong("errorRequestCount"),
-                    doc.getLong("totalRequestCount"),
-                    doc.getDouble("errorRate"),
-                    doc.getLong("distinctErrorHosts")));
+                    ((Number) doc.get("errorRequestCount")).longValue(),
+                    ((Number) doc.get("totalRequestCount")).longValue(),
+                    ((Number) doc.get("errorRate")).doubleValue(),
+                    ((Number) doc.get("distinctErrorHosts")).longValue()));
         }
         return results;
     }
