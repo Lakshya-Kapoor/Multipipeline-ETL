@@ -47,14 +47,13 @@ public class PigQuery1Pipeline {
         try {
             // Execute Pig script via CLI in local mode
             ProcessBuilder pb = new ProcessBuilder(
-                "pig",
-                "-x", "local",
-                scriptPath.toString()
-            );
-            
-            pb.inheritIO();  // Show Pig output
+                    "pig",
+                    "-x", "local",
+                    scriptPath.toString());
+
+            pb.inheritIO(); // Show Pig output
             int exitCode = pb.start().waitFor();
-            
+
             if (exitCode != 0) {
                 throw new Exception("Pig script execution failed with exit code: " + exitCode);
             }
@@ -106,7 +105,8 @@ public class PigQuery1Pipeline {
                                 requestCount,
                                 totalBytes));
                     } catch (IllegalArgumentException e) {
-                        System.err.println("DEBUG: Failed to parse date '" + logDateStr + "' normalized to '" + normalizeDate(logDateStr) + "'");
+                        System.err.println("DEBUG: Failed to parse date '" + logDateStr + "' normalized to '"
+                                + normalizeDate(logDateStr) + "'");
                         throw e;
                     }
                 }
@@ -119,12 +119,12 @@ public class PigQuery1Pipeline {
         // Convert "Jul-01-1995" to "1995-07-01"
         // Map month names to numbers and rearrange
         dateStr = dateStr.replace("Jan", "01").replace("Feb", "02").replace("Mar", "03").replace("Apr", "04")
-                         .replace("May", "05").replace("Jun", "06").replace("Jul", "07").replace("Aug", "08")
-                         .replace("Sep", "09").replace("Oct", "10").replace("Nov", "11").replace("Dec", "12");
+                .replace("May", "05").replace("Jun", "06").replace("Jul", "07").replace("Aug", "08")
+                .replace("Sep", "09").replace("Oct", "10").replace("Nov", "11").replace("Dec", "12");
         // Now format is MM-DD-YYYY, need to convert to YYYY-MM-DD
         String[] parts = dateStr.split("-");
         if (parts.length == 3) {
-            return parts[2] + "-" + parts[0] + "-" + parts[1];  // YYYY-MM-DD
+            return parts[2] + "-" + parts[0] + "-" + parts[1]; // YYYY-MM-DD
         }
         return dateStr;
     }

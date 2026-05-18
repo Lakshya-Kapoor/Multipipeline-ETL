@@ -46,14 +46,13 @@ public class PigQuery2Pipeline {
         try {
             // Execute Pig script via CLI in local mode
             ProcessBuilder pb = new ProcessBuilder(
-                "pig",
-                "-x", "local",
-                scriptPath.toString()
-            );
-            
-            pb.inheritIO();  // Show Pig output
+                    "pig",
+                    "-x", "local",
+                    scriptPath.toString());
+
+            pb.inheritIO(); // Show Pig output
             int exitCode = pb.start().waitFor();
-            
+
             if (exitCode != 0) {
                 throw new Exception("Pig script execution failed with exit code: " + exitCode);
             }
@@ -92,16 +91,21 @@ public class PigQuery2Pipeline {
             for (String line : lines) {
                 String[] parts = line.split(",");
                 if (parts.length >= 4) {
-                    String resourcePath = parts[0].trim();
-                    long requestCount = Long.parseLong(parts[1].trim());
-                    long totalBytes = Long.parseLong(parts[2].trim());
-                    long distinctHostCount = Long.parseLong(parts[3].trim());
+                    try {
+                        String resourcePath = parts[0].trim();
+                        long requestCount = Long.parseLong(parts[1].trim());
+                        long totalBytes = Long.parseLong(parts[2].trim());
+                        long distinctHostCount = Long.parseLong(parts[3].trim());
 
-                    results.add(new Query2Result(
-                            resourcePath,
-                            requestCount,
-                            totalBytes,
-                            distinctHostCount));
+                        results.add(new Query2Result(
+                                resourcePath,
+                                requestCount,
+                                totalBytes,
+                                distinctHostCount));
+                    } catch (NumberFormatException e) {
+                        System.err.println("DEBUG: Failed to parse line: " + line);
+                        throw e;
+                    }
                 }
             }
         }
