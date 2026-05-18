@@ -116,16 +116,12 @@ public class PigQuery1Pipeline {
     }
 
     private String normalizeDate(String dateStr) {
-        // Convert "Jul-01-1995" to "1995-07-01"
-        // Map month names to numbers and rearrange
+        // Pig outputs as "YYYY-MMM-DD" e.g., "1995-Jul-01"
+        // Need to convert to "YYYY-MM-DD" format for SQL Date
         dateStr = dateStr.replace("Jan", "01").replace("Feb", "02").replace("Mar", "03").replace("Apr", "04")
                 .replace("May", "05").replace("Jun", "06").replace("Jul", "07").replace("Aug", "08")
                 .replace("Sep", "09").replace("Oct", "10").replace("Nov", "11").replace("Dec", "12");
-        // Now format is MM-DD-YYYY, need to convert to YYYY-MM-DD
-        String[] parts = dateStr.split("-");
-        if (parts.length == 3) {
-            return parts[2] + "-" + parts[0] + "-" + parts[1]; // YYYY-MM-DD
-        }
+        // Now format is YYYY-MM-DD (already correct)
         return dateStr;
     }
 }
