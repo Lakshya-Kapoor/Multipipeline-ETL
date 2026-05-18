@@ -98,14 +98,34 @@ public class PigQuery1Pipeline {
                     long requestCount = Long.parseLong(parts[2].trim());
                     long totalBytes = Long.parseLong(parts[3].trim());
 
-                    results.add(new Query1Result(
-                            Date.valueOf(logDateStr),
-                            statusCode,
-                            requestCount,
-                            totalBytes));
+                    try {
+                        String normalizedDate = normalizeDate(logDateStr);
+                        results.add(new Query1Result(
+                                Date.valueOf(normalizedDate),
+                                statusCode,
+                                requestCount,
+                                totalBytes));
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("DEBUG: Failed to parse date '" + logDateStr + "' normalized to '" + normalizeDate(logDateStr) + "'");
+                        throw e;
+                    }
                 }
             }
         }
         return results;
+    }
+
+    private String normalizeDate(String dateStr) {
+        // Convert "Jul-01-1995" to "1995-07-01"
+        // Map month names to numbers and rearrange
+        dateStr = dateStr.replace("Jan", "01").replace("Feb", "02").replace("Mar", "03").replace("Apr", "04")
+                         .replace("May", "05").replace("Jun", "06").replace("Jul", "07").replace("Aug", "08")
+                         .replace("Sep", "09").replace("Oct", "10").replace("Nov", "11").replace("Dec", "12");
+        // Now format is MM-DD-YYYY, need to convert to YYYY-MM-DD
+        String[] parts = dateStr.split("-");
+        if (parts.length == 3) {
+            return parts[2] + "-" + parts[0] + "-" + parts[1];  // YYYY-MM-DD
+        }
+        return dateStr;
     }
 }
