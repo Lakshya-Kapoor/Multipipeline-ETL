@@ -6,9 +6,13 @@ import java.sql.SQLException;
 
 public class PostgresConnectionFactory {
     public Connection getConnection() throws SQLException {
-        String url = envRequired("PG_URL");
+        String host = envRequired("PG_HOST");
+        String port = envRequired("PG_PORT");
+        String database = envRequired("PG_DB");
         String user = envRequired("PG_USER");
         String password = envRequired("PG_PASSWORD");
+        
+        String url = String.format("jdbc:postgresql://%s:%s/%s", host, port, database);
         return DriverManager.getConnection(url, user, password);
     }
 

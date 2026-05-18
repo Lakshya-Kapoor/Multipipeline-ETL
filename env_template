@@ -1,19 +1,28 @@
+# PostgreSQL Configuration
 PG_HOST=localhost
 PG_PORT=5432
 PG_DB=etl2
 PG_USER=etl
 PG_PASSWORD=pass
+
+# MongoDB Configuration
 MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_DATABASE=etl
 MONGO_USER=etl_user
 MONGO_PASSWORD=pass
 MONGO_AUTH_SOURCE=etl
+
+# Hive Configuration
+HIVE_HOST=localhost
+HIVE_PORT=10000
+HIVE_DATABASE=default
+
+# Tool Paths
 JAVA_HOME=/home/sahas/PROJECTS/multiPipelineEtl/jdk1.8.0_491
-HIVE_HOME=/home/sahas/PROJECTS/multiPipelineEtl/apache-hive-4.2.0-bin
+HIVE_HOME=/home/sahas/PROJECTS/multiPipelineEtl/apache-hive-4.0.1-bin
 HADOOP_HOME=/home/sahas/PROJECTS/multiPipelineEtl/hadoop-3.4.3
-PIG_HOME=/home/sahas/PROJECTS/multiPipelineEtl/pig-0.17.0/
-export PATH=$JAVA_HOME/bin:$PATH
-export PATH=$HIVE_HOME/bin:$PATH
-export PATH=$HADOOP_HOME/bin:$PATH
-export PATH=$PIG_HOME/bin:$PATH
+PIG_HOME=/home/sahas/PROJECTS/multiPipelineEtl/pig-0.17.0
+
+# Add tools to PATH
+export PATH=$JAVA_HOME/bin:$HIVE_HOME/bin:$HADOOP_HOME/bin:$PIG_HOME/bin:$PATH
