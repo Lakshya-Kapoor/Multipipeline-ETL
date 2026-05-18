@@ -12,11 +12,11 @@ public class PigScriptGenerator {
                         "\n" +
                         "-- Parse log lines\n" +
                         "parsed = FOREACH logs GENERATE\n" +
-                        "  CONCAT(REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})\", 3), '-',\n" +
-                        "         REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})\", 2), '-',\n" +
-                        "         REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})\", 1)) AS log_date,\n" +
-                        "  (int)REGEX_EXTRACT(line, \"\\\\s+(\\\\d{3})\\\\s+\", 1) AS status_code,\n" +
-                        "  REGEX_EXTRACT(line, \"\\\\s+(\\\\d+|-)\\\\s*$\", 1) AS bytes_str;\n" +
+                        "  CONCAT(REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})', 3), '-',\n" +
+                        "         REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})', 2), '-',\n" +
+                        "         REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})', 1)) AS log_date,\n" +
+                        "  (int)REGEX_EXTRACT(line, '\\\\s+(\\\\d{3})\\\\s+', 1) AS status_code,\n" +
+                        "  REGEX_EXTRACT(line, '\\\\s+(\\\\d+|-)\\\\s*$', 1) AS bytes_str;\n" +
                         "\n" +
                         "-- Filter out malformed records\n" +
                         "filtered = FILTER parsed BY log_date IS NOT NULL AND status_code IS NOT NULL;\n" +
@@ -48,13 +48,12 @@ public class PigScriptGenerator {
                         "\n" +
                         "-- Parse log lines: host, resource_path (from GET /path), and bytes\n" +
                         "parsed = FOREACH logs GENERATE\n" +
-                        "  REGEX_EXTRACT(line, \"^(\\\\S+)\\\\s+\", 1) AS host,\n" +
-                        "  REGEX_EXTRACT(line, \"\\\\\"[A-Z]+\\\\s+([^\\\\s]+)\\\\s+\", 1) AS resource_path,\n" +
-                        "  REGEX_EXTRACT(line, \"\\\\s+(\\\\d+|-)\\\\s*$\", 1) AS bytes_str;\n" +
+                        "  REGEX_EXTRACT(line, '^(\\\\S+)\\\\s+', 1) AS host,\n" +
+                        "  REGEX_EXTRACT(line, '\\\\\"[A-Z]+\\\\s+([^\\\\s]+)\\\\s+', 1) AS resource_path,\n" +
+                        "  REGEX_EXTRACT(line, '\\\\s+(\\\\d+|-)\\\\s*$', 1) AS bytes_str;\n" +
                         "\n" +
                         "-- Filter out malformed records\n" +
-                        "filtered = FILTER parsed BY resource_path IS NOT NULL AND host IS NOT NULL AND resource_path != '';\n"
-                        +
+                        "filtered = FILTER parsed BY resource_path IS NOT NULL AND host IS NOT NULL AND resource_path != '';\n" +
                         "\n" +
                         "-- Convert bytes\n" +
                         "with_bytes = FOREACH filtered GENERATE\n" +
@@ -90,13 +89,12 @@ public class PigScriptGenerator {
                         "\n" +
                         "-- Parse log lines\n" +
                         "parsed = FOREACH logs GENERATE\n" +
-                        "  CONCAT(REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})\", 3), '-',\n" +
-                        "         REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})\", 2), '-',\n" +
-                        "         REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})\", 1)) AS log_date,\n" +
-                        "  (int)REGEX_EXTRACT(line, \"\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4}):(\\\\d{2}):\", 4) AS log_hour,\n"
-                        +
-                        "  (int)REGEX_EXTRACT(line, \"\\\\s+(\\\\d{3})\\\\s+\", 1) AS status_code,\n" +
-                        "  REGEX_EXTRACT(line, \"^(\\\\S+)\\\\s+\", 1) AS host;\n" +
+                        "  CONCAT(REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})', 3), '-',\n" +
+                        "         REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})', 2), '-',\n" +
+                        "         REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4})', 1)) AS log_date,\n" +
+                        "  (int)REGEX_EXTRACT(line, '\\\\[(\\\\d{2})/(\\\\w{3})/(\\\\d{4}):(\\\\d{2}):', 4) AS log_hour,\n" +
+                        "  (int)REGEX_EXTRACT(line, '\\\\s+(\\\\d{3})\\\\s+', 1) AS status_code,\n" +
+                        "  REGEX_EXTRACT(line, '^(\\\\S+)\\\\s+', 1) AS host;\n" +
                         "\n" +
                         "-- Filter out malformed records\n" +
                         "filtered = FILTER parsed BY log_date IS NOT NULL AND status_code IS NOT NULL;\n" +

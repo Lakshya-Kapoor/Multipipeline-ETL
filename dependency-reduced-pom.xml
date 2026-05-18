@@ -25,6 +25,11 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <transformers>
+                <transformer>
+                  <mainClass>com.example.multipipelineetl.app.App</mainClass>
+                </transformer>
+              </transformers>
               <filters>
                 <filter>
                   <artifact>*:*</artifact>
